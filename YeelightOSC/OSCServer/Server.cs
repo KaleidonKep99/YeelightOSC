@@ -7,7 +7,8 @@ namespace YeelightOSC
 {
     public class VRLayer
     {
-        private readonly IPEndPoint VRChat = new IPEndPoint(IPAddress.Loopback, 9000);
+        public readonly IPEndPoint VRChat = new IPEndPoint(IPAddress.Loopback, 9000);
+        public readonly IPEndPoint VRServer = new IPEndPoint(IPAddress.Loopback, 9001);
         private OscServer VRMaster = new OscServer(Bespoke.Common.Net.TransportType.Udp, IPAddress.Loopback, 9001);
 
         private string Base = @"/avatar/parameters/";
@@ -29,7 +30,7 @@ namespace YeelightOSC
             }
 
             // Tell VRChat that we're ready to receive messages
-            SendMsg("OSCWakeUp");
+            SendMsg("OSCWakeUp", VRChat);
 
             Heartbeat.Elapsed += HeartbeatEvent;
             Heartbeat.AutoReset = true;
@@ -40,13 +41,13 @@ namespace YeelightOSC
         // VRChat won't send packets unless it receives one first.
         private void HeartbeatEvent(object? sender, ElapsedEventArgs e)
         {
-            SendMsg("OSCHeartbeat");
+            SendMsg("OSCHeartbeat", VRChat);
         }
 
         // Send a message to VRChat
-        public void SendMsg(string Target, object? Value = null)
+        public void SendMsg(string Target, IPEndPoint NetTarget, object? Value = null)
         {
-            OscBundle VRBundle = new OscBundle(VRChat);
+            OscBundle VRBundle = new OscBundle(NetTarget);
             OscMessage Message;
 
             Message = new OscMessage(VRChat, String.Format("{0}{1}", Base, Target));

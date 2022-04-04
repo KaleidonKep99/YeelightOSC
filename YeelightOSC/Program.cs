@@ -15,7 +15,7 @@ namespace YeelightOSC
         static string[] Methods = new string[] { "Brightness", "Temperature", "ColorR", "ColorG", "ColorB", "SendUpdate", "LightToggle" };
 
         [STAThread]
-        static void Main(string[] Args)
+        static int Main(string[] Args)
         {
             Yeebulb.Dispose();
 
@@ -34,6 +34,7 @@ namespace YeelightOSC
             {
                 Console.WriteLine("IP not specified or not valid.");
                 Console.ReadKey();
+                return -1;
             }
 
             Yeebulb = new YeelightAPI.Device(Args[0]);
@@ -43,17 +44,84 @@ namespace YeelightOSC
 
                 TranslationLayer.Init(new EventHandler<OscMessageReceivedEventArgs>(MessageF), Methods);
 
-                TranslationLayer.SendMsg(Methods[0], 1.0f);
-                TranslationLayer.SendMsg(Methods[1], 0.542f);
-                TranslationLayer.SendMsg(Methods[2], 1.0f);
-                TranslationLayer.SendMsg(Methods[3], 1.0f);
-                TranslationLayer.SendMsg(Methods[4], 1.0f);
-                TranslationLayer.SendMsg(Methods[5], 0);
-                TranslationLayer.SendMsg(Methods[6], true);
+                TranslationLayer.SendMsg(Methods[0], TranslationLayer.VRChat, 1.0f);
+                TranslationLayer.SendMsg(Methods[1], TranslationLayer.VRChat, 0.542f);
+                TranslationLayer.SendMsg(Methods[2], TranslationLayer.VRChat, 1.0f);
+                TranslationLayer.SendMsg(Methods[3], TranslationLayer.VRChat, 1.0f);
+                TranslationLayer.SendMsg(Methods[4], TranslationLayer.VRChat, 1.0f);
+                TranslationLayer.SendMsg(Methods[5], TranslationLayer.VRChat, 0);
+                TranslationLayer.SendMsg(Methods[6], TranslationLayer.VRChat, true);
             });
 
             while (true)
-                Thread.Sleep(500);
+            {
+                while (!Yeebulb.IsConnected) ;
+
+                string[] CArgs = Console.ReadLine().ToLower().Split(' ');
+                int Value = 250;
+                int[] RGB = new int[3];
+
+                if (CArgs.Length > 1)
+                    int.TryParse(CArgs[1], out Value);
+
+                if (CArgs.Length == 4)
+                {
+                    int.TryParse(CArgs[1], out RGB[0]);
+                    int.TryParse(CArgs[2], out RGB[1]);
+                    int.TryParse(CArgs[3], out RGB[2]);
+                }
+
+                switch (CArgs[0])
+                {
+                    case "i":
+                    case "on":
+                        Yeebulb.SetPower(true, Value);
+
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine(String.Format("{0} has been turned on", Yeebulb.Name, Value));
+                        break;
+
+                    case "o":
+                    case "off":
+                        Yeebulb.SetPower(false, Value);
+
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine(String.Format("{0} has been turned off", Yeebulb.Name, Value));
+                        break;
+
+                    case "br":
+                    case "bright":
+                    case "brightness":
+                        Yeebulb.SetBrightness(Value);
+
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine(String.Format("{0}'s brightness set to BR{1}", Yeebulb.Name, Value));
+                        break;
+
+                    case "te":
+                    case "temp":
+                    case "temperature":
+                        Yeebulb.SetColorTemperature(Value);
+
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine(String.Format("{0}'s temperature set to TE{1}", Yeebulb.Name, Value));
+                        break;
+
+                    case "rgb":
+                        Yeebulb.SetRGBColor(RGB[0], RGB[1], RGB[2]);
+
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine(String.Format("{0}'s RGB values set to R{1} G{2} B{3}", Yeebulb.Name, RGB[0], RGB[1], RGB[2]));
+                        break;
+
+                    default:
+                        break;
+                }
+
+                Console.ResetColor();
+            };
+
+            return 0;
         }
 
         static void MessageF(object? sender, OscMessageReceivedEventArgs Var)

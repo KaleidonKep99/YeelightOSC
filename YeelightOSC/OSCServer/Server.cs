@@ -46,7 +46,7 @@ namespace YeelightOSC
                         {
                             if (IP.Address.AddressFamily == AddressFamily.InterNetwork)
                             {
-                                // We got the IP, let's start the server
+                                // We got the IP, let's start the server on port 9500 (you will need to port forward)
                                 ExternalInput = new OscServer(Bespoke.Common.Net.TransportType.Udp, IP.Address, 9500);
 
                                 // Register all the parameters that we will use
@@ -101,25 +101,68 @@ namespace YeelightOSC
             SendVRMsg("OSCHeartbeat", VRChat, true, true);
         }
 
-        // Send a message to the target OSC server
-        private void SendMsg(string Target, IPEndPoint NetTarget, object? Value = null, bool? Silent = false)
+        // Since messages can have multiple variables in one, we had to do this fuckery...
+        // And hey, it works, so whatever!
+        private OscMessage BuildMsg(string Target, IPEndPoint NetTarget, params object[] Parameters)
         {
             OscMessage Message = new OscMessage(NetTarget, Target);
-            Message.Append(Value);
 
+            try
+            {
+                foreach (object Param in Parameters)
+                {
+                    switch (Param)
+                    {
+                        case int[] iArray:
+                            foreach (int i in iArray)
+                                Message.Append(i);
+                            break;
+
+                        case float[] fArray:
+                            foreach (float f in fArray)
+                                Message.Append(f);
+                            break;
+
+                        case byte[] bArray:
+                            foreach (byte b in bArray)
+                                Message.Append(b);
+                            break;
+
+                        case string[] sArray:
+                            foreach (string s in sArray)
+                                Message.Append(s);
+                            break;
+
+                        default:
+                            Message.Append(Param);
+                            break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+
+            return Message;
+        }
+
+        // Send a message to the target OSC server
+        public void SendMsg(string Target, IPEndPoint NetTarget, object? Value = null, bool? Silent = false)
+        {
+            OscMessage Message = BuildMsg(Target, NetTarget, Value);
             Message.Send(NetTarget);
+
             if (Silent == false) Console.WriteLine(String.Format("Sent message {0} to {1} (port {2})", Message.Address, NetTarget.Address.ToString(), NetTarget.Port.ToString()));
         }
 
         // Send a bundle to the target OSC server
-        private void SendBndl(IPEndPoint NetTarget, List<OscMessage>? MsgVector = null, bool? Silent = false)
+        public void SendBndl(IPEndPoint NetTarget, List<OscMessage>? MsgVector = null, bool? Silent = false)
         {
             OscBundle Bundle = new OscBundle(NetTarget);
 
             foreach (OscMessage Msg in MsgVector)
-            {
                 Bundle.Append(Msg);
-            }
 
             Bundle.Send(NetTarget);
             if (Silent == false) Console.WriteLine(String.Format("Sent bundle to {0} (port {1})", NetTarget.Address.ToString(), NetTarget.Port.ToString()));

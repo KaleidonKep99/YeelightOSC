@@ -115,6 +115,11 @@ namespace YeelightOSC
                         Console.WriteLine(String.Format("{0}'s RGB values set to R{1} G{2} B{3}", Yeebulb.Name, RGB[0], RGB[1], RGB[2]));
                         break;
 
+                    case "vibe":
+                        HttpClient Client = new HttpClient();
+                        var Response = Client.GetStringAsync("http://ip:port/command?v=0&t=id");
+                        break;
+
                     default:
                         break;
                 }

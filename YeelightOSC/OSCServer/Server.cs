@@ -112,20 +112,14 @@ namespace YeelightOSC
         }
 
         // Send a bundle to the target OSC server
-        private void SendBndl(IPEndPoint NetTarget, List<OscMessage>? MsgArray = null, bool? Silent = false)
+        private void SendBndl(IPEndPoint NetTarget, List<OscMessage>? MsgVector = null, bool? Silent = false)
         {
             OscBundle Bundle = new OscBundle(NetTarget);
 
-            foreach (OscMessage Msg in MsgArray)
+            foreach (OscMessage Msg in MsgVector)
             {
                 Bundle.Append(Msg);
             }
-
-            foreach (Byte B in Bundle.ToByteArray())
-            {
-                Console.Write(String.Format("{0}", char.ConvertFromUtf32(B)));
-            }
-            Console.Write("\n");
 
             Bundle.Send(NetTarget);
             if (Silent == false) Console.WriteLine(String.Format("Sent bundle to {0} (port {1})", NetTarget.Address.ToString(), NetTarget.Port.ToString()));

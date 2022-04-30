@@ -1,6 +1,5 @@
-﻿using Bespoke.Osc;
-using System.Globalization;
-using System.Net;
+﻿using System.Net;
+using Bespoke.Osc;
 
 namespace YeelightOSC
 {
@@ -43,15 +42,16 @@ namespace YeelightOSC
             {
                 Console.WriteLine(String.Format("Connected to {0} (Hostname: {1})", Yeebulb.Name, Yeebulb.Hostname));
 
-                TranslationLayer.Init(new EventHandler<OscMessageReceivedEventArgs>(MessageF), Methods);
+                TranslationLayer.Init(new EventHandler<OscMessageReceivedEventArgs>(MessageF), new EventHandler<OscBundleReceivedEventArgs>(BundleF), Methods);
 
-                TranslationLayer.SendVRMsg(Methods[0], TranslationLayer.VRChat, 1.0f);
-                TranslationLayer.SendVRMsg(Methods[1], TranslationLayer.VRChat, 0.542f);
-                TranslationLayer.SendVRMsg(Methods[2], TranslationLayer.VRChat, 1.0f);
-                TranslationLayer.SendVRMsg(Methods[3], TranslationLayer.VRChat, 1.0f);
-                TranslationLayer.SendVRMsg(Methods[4], TranslationLayer.VRChat, 1.0f);
-                TranslationLayer.SendVRMsg(Methods[5], TranslationLayer.VRChat, 0);
-                TranslationLayer.SendVRMsg(Methods[6], TranslationLayer.VRChat, true);
+                TranslationLayer.SendVRMsg(Methods[0], TranslationLayer.VRChat, 1.0f, true);
+                TranslationLayer.SendVRMsg(Methods[1], TranslationLayer.VRChat, 0.542f, true);
+                TranslationLayer.SendVRMsg(Methods[2], TranslationLayer.VRChat, 1.0f, true);
+                TranslationLayer.SendVRMsg(Methods[3], TranslationLayer.VRChat, 1.0f, true);
+                TranslationLayer.SendVRMsg(Methods[4], TranslationLayer.VRChat, 1.0f, true);
+                TranslationLayer.SendVRMsg(Methods[5], TranslationLayer.VRChat, 0, true);
+                TranslationLayer.SendVRMsg(Methods[6], TranslationLayer.VRChat, true, true);
+                TranslationLayer.SendVRMsg(Methods[7], TranslationLayer.VRChat, true, true);
             });
 
             while (true)
@@ -125,48 +125,68 @@ namespace YeelightOSC
             return 0;
         }
 
-        static void MessageA(object? sender, OscMessageReceivedEventArgs Var)
+        static bool CastCheck(string Variable, object Data, Type DataType)
         {
-            Console.WriteLine("A");
+            if (Data.GetType() != DataType)
+            {
+                Console.WriteLine(String.Format("The value received for {0} is not of type {1}", Variable, DataType.Name));
+                return false;
+            }
+
+            return true;
         }
 
-        static void MessageF(object? sender, OscMessageReceivedEventArgs Var)
+        static void AnalyzeData(object? sender, IPEndPoint Source, string Address, IList<object> Data)
         {
             if (sender == null) return;
 
             try
-            {
-                string Variable = Var.Message.Address.Substring(Var.Message.Address.LastIndexOf("/") + 1);
+            {            
+                string Variable = Address.Substring(Address.LastIndexOf("/") + 1); ;
+
+                Console.Write(String.Format("Message received from {0}:{1} -> ", Source.Address, Source.Port));
 
                 switch (Variable)
                 {
                     case "Brightness":
-                        Brightness = (float)Var.Message.Data[0];
+                        if (!CastCheck(Variable, Data[0], typeof(float))) break;
+
+                        Brightness = (float)Data[0];
                         Console.WriteLine(String.Format("Brightness set to {0} (BR{1}, {1:X})", Brightness, MFuncs.FtoI(Brightness, 100)));
                         break;
 
                     case "Temperature":
-                        Temperature = MFuncs.Lerp((float)Var.Message.Data[0], 1700, 6500);
+                        if (!CastCheck(Variable, Data[0], typeof(float))) break;
+
+                        Temperature = MFuncs.Lerp((float)Data[0], 1700, 6500);
                         Console.WriteLine(String.Format("Temperature set to {0} (TE{1}, {1:X})", Temperature, (int)Temperature));
                         break;
 
                     case "ColorR":
-                        R = (float)Var.Message.Data[0];
+                        if (!CastCheck(Variable, Data[0], typeof(float))) break;
+
+                        R = (float)Data[0];
                         Console.WriteLine(String.Format("Set ColorR to value R{0} ({0:X})", MFuncs.FtoI(R, 255)));
                         break;
 
                     case "ColorG":
-                        G = (float)Var.Message.Data[0];
+                        if (!CastCheck(Variable, Data[0], typeof(float))) break;
+
+                        G = (float)Data[0];
                         Console.WriteLine(String.Format("Set ColorG to value G{0} ({0:X})", MFuncs.FtoI(G, 255)));
                         break;
 
                     case "ColorB":
-                        B = (float)Var.Message.Data[0];
+                        if (!CastCheck(Variable, Data[0], typeof(float))) break;
+
+                        B = (float)Data[0];
                         Console.WriteLine(String.Format("Set ColorB to value B{0} ({0:X})", MFuncs.FtoI(B, 255)));
                         break;
 
                     case "SendUpdate":
-                        switch ((int)Var.Message.Data[0])
+                        if (!CastCheck(Variable, Data[0], typeof(int))) break;
+
+                        switch ((int)Data[0])
                         {
                             case 1:
                                 Yeebulb.SetBrightness(MFuncs.FtoI(Brightness, 100));
@@ -180,7 +200,7 @@ namespace YeelightOSC
                                 Yeebulb.SetRGBColor(MFuncs.FtoI(R, 255), MFuncs.FtoI(G, 255), MFuncs.FtoI(B, 255));
 
                                 Console.WriteLine(
-                                    String.Format("Set color to values R{0} ({0:X}), G{1} ({1:X}), B{2} ({2:X}), with BR{3} ({3:X})", 
+                                    String.Format("Set color to values R{0} ({0:X}), G{1} ({1:X}), B{2} ({2:X}), with BR{3} ({3:X})",
                                     MFuncs.FtoI(R, 255), MFuncs.FtoI(G, 255), MFuncs.FtoI(B, 255), MFuncs.FtoI(Brightness, 100)));
                                 break;
 
@@ -190,12 +210,17 @@ namespace YeelightOSC
                         break;
 
                     case "LightToggle":
-                        Yeebulb.SetPower((bool)Var.Message.Data[0]);
-                        Console.WriteLine(String.Format("Power status set to {0}", (bool)Var.Message.Data[0] ? "on" : "off"));
+                        if (!CastCheck(Variable, Data[0], typeof(bool))) break;
+
+                        Yeebulb.SetPower((bool)Data[0]);
+                        Console.WriteLine(String.Format("Power status set to {0}", (bool)Data[0] ? "on" : "off"));
+                        break;
+
+                    case "#bundle":
                         break;
 
                     default:
-                        Console.WriteLine(String.Format("Unknown command: {0}", Var.Message.Address));
+                        Console.WriteLine(String.Format("Unknown address: {0}", Address));
                         break;
                 }
             }
@@ -203,6 +228,16 @@ namespace YeelightOSC
             {
                 Console.WriteLine(ex.ToString());
             }
+        }
+
+        static void BundleF(object? sender, OscBundleReceivedEventArgs Var) 
+        {
+            AnalyzeData(sender, Var.Bundle.SourceEndPoint, Var.Bundle.Address, Var.Bundle.Data);
+        }
+
+        static void MessageF(object? sender, OscMessageReceivedEventArgs Var)
+        {
+            AnalyzeData(sender, Var.Message.SourceEndPoint, Var.Message.Address, Var.Message.Data);
         }
     }
 }

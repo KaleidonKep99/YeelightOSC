@@ -1,4 +1,5 @@
 ﻿using Bespoke.Osc;
+using System.Globalization;
 using System.Net;
 
 namespace YeelightOSC
@@ -44,13 +45,13 @@ namespace YeelightOSC
 
                 TranslationLayer.Init(new EventHandler<OscMessageReceivedEventArgs>(MessageF), Methods);
 
-                TranslationLayer.SendMsg(Methods[0], TranslationLayer.VRChat, 1.0f);
-                TranslationLayer.SendMsg(Methods[1], TranslationLayer.VRChat, 0.542f);
-                TranslationLayer.SendMsg(Methods[2], TranslationLayer.VRChat, 1.0f);
-                TranslationLayer.SendMsg(Methods[3], TranslationLayer.VRChat, 1.0f);
-                TranslationLayer.SendMsg(Methods[4], TranslationLayer.VRChat, 1.0f);
-                TranslationLayer.SendMsg(Methods[5], TranslationLayer.VRChat, 0);
-                TranslationLayer.SendMsg(Methods[6], TranslationLayer.VRChat, true);
+                TranslationLayer.SendVRMsg(Methods[0], TranslationLayer.VRChat, 1.0f);
+                TranslationLayer.SendVRMsg(Methods[1], TranslationLayer.VRChat, 0.542f);
+                TranslationLayer.SendVRMsg(Methods[2], TranslationLayer.VRChat, 1.0f);
+                TranslationLayer.SendVRMsg(Methods[3], TranslationLayer.VRChat, 1.0f);
+                TranslationLayer.SendVRMsg(Methods[4], TranslationLayer.VRChat, 1.0f);
+                TranslationLayer.SendVRMsg(Methods[5], TranslationLayer.VRChat, 0);
+                TranslationLayer.SendVRMsg(Methods[6], TranslationLayer.VRChat, true);
             });
 
             while (true)
@@ -124,6 +125,11 @@ namespace YeelightOSC
             return 0;
         }
 
+        static void MessageA(object? sender, OscMessageReceivedEventArgs Var)
+        {
+            Console.WriteLine("A");
+        }
+
         static void MessageF(object? sender, OscMessageReceivedEventArgs Var)
         {
             if (sender == null) return;
@@ -186,6 +192,10 @@ namespace YeelightOSC
                     case "LightToggle":
                         Yeebulb.SetPower((bool)Var.Message.Data[0]);
                         Console.WriteLine(String.Format("Power status set to {0}", (bool)Var.Message.Data[0] ? "on" : "off"));
+                        break;
+
+                    default:
+                        Console.WriteLine(String.Format("Unknown command: {0}", Var.Message.Address));
                         break;
                 }
             }

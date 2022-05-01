@@ -1,7 +1,7 @@
 ﻿using Bespoke.Osc;
 using System.Net;
-using System.Net.Sockets;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Timers;
 
 namespace YeelightOSC
@@ -26,6 +26,7 @@ namespace YeelightOSC
         private string Base = @"/avatar/parameters/";
         private string[] Methods;
         private System.Timers.Timer Heartbeat = new System.Timers.Timer(5000);
+        private LogSystem VRLayerLog = new LogSystem("VRLayer");
 
         public void Init(EventHandler<OscMessageReceivedEventArgs> Message, EventHandler<OscBundleReceivedEventArgs> Bundle, string[] SMethods)
         {
@@ -53,7 +54,7 @@ namespace YeelightOSC
                                 foreach (string Method in Methods)
                                 {
                                     ExternalInput.RegisterMethod(Method);
-                                    Console.WriteLine(String.Format("Registered {0} for ExternalInput", Method));
+                                    VRLayerLog.PrintMessage(LogSystem.MsgType.Information, "Registered parameter (bound to local IP).", "ExternalInput", Method, IP.Address, 9500);
                                 }
 
                                 // Attach the event handlers to the OSC server, then start it
@@ -61,7 +62,7 @@ namespace YeelightOSC
                                 ExternalInput.BundleReceived += Bundle;
                                 ExternalInput.Start();
 
-                                Console.WriteLine(String.Format("ExternalInput -> Listening on {0}", IP.Address.ToString()));
+                                VRLayerLog.PrintMessage(LogSystem.MsgType.Information, String.Format("Listening on {0}", IP.Address.ToString()), "ExternalInput");
                                 break;
                             }
                         }
@@ -70,19 +71,19 @@ namespace YeelightOSC
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                VRLayerLog.PrintMessage(LogSystem.MsgType.Error, "An error has occured.", ex.ToString());
             }
 
             // Register all the parameters that we will use
             foreach (string Method in Methods)
             {
                 VRMaster.RegisterMethod(String.Format("{0}{1}", Base, Method));
-                Console.WriteLine(String.Format("Registered {0} for VRServer", Method));
+                VRLayerLog.PrintMessage(LogSystem.MsgType.Information, "Registered parameter.", "VRServer", Method);
             }
 
             // Send a dummy packet to VRChat to ready up its OSC server
             SendVRMsg("OSCWakeUp", VRChat, true, true);
-            
+
             // Heartbeat event, to avoid timeouts in case VRChat's OSC server goes to sleep
             Heartbeat.Elapsed += HeartbeatEvent;
             Heartbeat.AutoReset = true;
@@ -118,14 +119,19 @@ namespace YeelightOSC
                                 Message.Append(i);
                             break;
 
+                        case bool[] boArray:
+                            foreach (bool bo in boArray)
+                                Message.Append(bo);
+                            break;
+
                         case float[] fArray:
                             foreach (float f in fArray)
                                 Message.Append(f);
                             break;
 
-                        case byte[] bArray:
-                            foreach (byte b in bArray)
-                                Message.Append(b);
+                        case byte[] byArray:
+                            foreach (byte by in byArray)
+                                Message.Append(by);
                             break;
 
                         case string[] sArray:
@@ -133,15 +139,23 @@ namespace YeelightOSC
                                 Message.Append(s);
                             break;
 
-                        default:
+                        case int i:
+                        case bool bo:
+                        case float f:
+                        case byte by:
+                        case string s:
                             Message.Append(Param);
+                            break;
+
+                        default:
+                            VRLayerLog.PrintMessage(LogSystem.MsgType.Error, "Unsupported parameter passed to BuildMsg.", Param.GetType());
                             break;
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                VRLayerLog.PrintMessage(LogSystem.MsgType.Error, "An error has occured.", ex.ToString());
             }
 
             return Message;
@@ -153,7 +167,7 @@ namespace YeelightOSC
             OscMessage Message = BuildMsg(Target, NetTarget, Value);
             Message.Send(NetTarget);
 
-            if (Silent == false) Console.WriteLine(String.Format("Sent message {0} to {1} (port {2})", Message.Address, NetTarget.Address.ToString(), NetTarget.Port.ToString()));
+            if (Silent == false) VRLayerLog.PrintMessage(LogSystem.MsgType.Information, "OSC message sent.", Message.Address, NetTarget.Address.ToString(), NetTarget.Port.ToString());
         }
 
         // Send a bundle to the target OSC server
@@ -165,7 +179,7 @@ namespace YeelightOSC
                 Bundle.Append(Msg);
 
             Bundle.Send(NetTarget);
-            if (Silent == false) Console.WriteLine(String.Format("Sent bundle to {0} (port {1})", NetTarget.Address.ToString(), NetTarget.Port.ToString()));
+            if (Silent == false) VRLayerLog.PrintMessage(LogSystem.MsgType.Information, "OSC bundle sent.", NetTarget.Address.ToString(), NetTarget.Port.ToString());
         }
 
         // Send a message to VRChat

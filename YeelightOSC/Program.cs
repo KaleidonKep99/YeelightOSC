@@ -13,7 +13,7 @@ namespace YeelightOSC
         static VRLayer TranslationLayer = new VRLayer();
         static MathFuncs MFuncs = new MathFuncs();
         static string[] Methods = new string[] { "Brightness", "Temperature", "ColorR", "ColorG", "ColorB", "SendUpdate", "LightToggle" };
-        private static LogSystem MainLog = new LogSystem("MainPro");
+        static LogSystem MainLog = new LogSystem("MainPro");
 
         [STAThread]
         static int Main(string[] Args)
@@ -58,7 +58,20 @@ namespace YeelightOSC
 
             while (true)
             {
-                while (!Yeebulb.IsConnected) ;
+                int Retries = 0;
+                while (!Yeebulb.IsConnected)
+                {
+                    MainLog.PrintMessage(LogSystem.MsgType.Information, "Trying to connect to specified device...", Args[0]);
+                    Thread.Sleep(2000);
+
+                    Retries++;
+                    if (Retries == 5)
+                    {
+                        MainLog.PrintMessage(LogSystem.MsgType.Fatal, "Device did not respond.");
+                        Console.ReadKey();
+                        return -1;
+                    }
+                }
 
                 string[] CArgs = Console.ReadLine().ToLower().Split(' ');
                 int Value = 250;
@@ -253,7 +266,7 @@ namespace YeelightOSC
 
                     // Unrecognized address
                     default:
-                        MainLog.PrintMessage(LogSystem.MsgType.Information, String.Format("{0} received, but the address wasn't of a recognized type.", DataType == typeof(OscBundle) ? "Bundle" : "Message"), Source.Address, Source.Port, Address);
+                        MainLog.PrintMessage(LogSystem.MsgType.Warning, String.Format("{0} received, but the address wasn't of a recognized type.", DataType == typeof(OscBundle) ? "Bundle" : "Message"), Source.Address, Source.Port, Address);
                         break;
                 }
             }
